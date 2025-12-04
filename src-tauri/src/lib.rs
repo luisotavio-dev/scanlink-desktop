@@ -46,7 +46,7 @@ async fn start_server(
     if already_starting {
         // Wait a bit and return current QR data if available
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        
+
         let connection_info_clone = state.connection_info.lock().unwrap().clone();
         if let Some(connection_info) = connection_info_clone {
             let qr_data = generate_qr_code(&connection_info)?;

@@ -84,7 +84,7 @@ export default function Home({ onOpenSettings }: HomeProps) {
             qr_base64: string;
             connection_info: { ip: string; port: number; token: string };
           } | null>('get_current_qr_data');
-          
+
           if (existingQRData) {
             console.log('Retrieved existing QR data with token:', existingQRData.connection_info.token);
             setQRData(existingQRData);
