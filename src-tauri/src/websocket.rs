@@ -153,15 +153,6 @@ async fn handle_connection(
                         // Try to parse as new format (ScanMessage)
                         if let Ok(scan_msg) = serde_json::from_str::<ScanMessage>(text) {
                             if scan_msg.action == "scan" {
-                                // Validate token
-                                log::info!("=== TOKEN COMPARISON (NEW FORMAT) ===");
-                                log::info!("Expected token: '{}' (len: {})", expected_token, expected_token.len());
-                                log::info!("Received token: '{}' (len: {})", scan_msg.payload.token, scan_msg.payload.token.len());
-                                log::info!("Expected bytes: {:?}", expected_token.as_bytes());
-                                log::info!("Received bytes: {:?}", scan_msg.payload.token.as_bytes());
-                                log::info!("Tokens match: {}", scan_msg.payload.token == expected_token);
-                                log::info!("=====================================");
-
                                 if scan_msg.payload.token == expected_token {
                                     authenticated = true;
                                     log::info!("Client {} authenticated with valid token (new format)", client_id);
@@ -209,15 +200,6 @@ async fn handle_connection(
 
                         // Try to parse as old format (BarcodeMessage) for backward compatibility
                         if let Ok(barcode_msg) = serde_json::from_str::<BarcodeMessage>(text) {
-                            // Validate token
-                            log::info!("=== TOKEN COMPARISON (OLD FORMAT) ===");
-                            log::info!("Expected token: '{}' (len: {})", expected_token, expected_token.len());
-                            log::info!("Received token: '{}' (len: {})", barcode_msg.token, barcode_msg.token.len());
-                            log::info!("Expected bytes: {:?}", expected_token.as_bytes());
-                            log::info!("Received bytes: {:?}", barcode_msg.token.as_bytes());
-                            log::info!("Tokens match: {}", barcode_msg.token == expected_token);
-                            log::info!("=====================================");
-
                             if barcode_msg.token == expected_token {
                                 authenticated = true;
                                 log::info!("Client {} authenticated with valid token (old format)", client_id);

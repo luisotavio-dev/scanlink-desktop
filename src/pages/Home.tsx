@@ -48,9 +48,18 @@ export default function Home({ onOpenSettings }: HomeProps) {
 
   useEffect(() => {
     // Listen for barcode events from backend
-    const unlistenPromise = listen<BarcodeMessage>('barcode-received', (event) => {
+    const unlistenBarcodePromise = listen<BarcodeMessage>('barcode-received', (event) => {
       console.log('Barcode received:', event.payload);
       addBarcode(event.payload.barcode, event.payload.timestamp);
+    });
+
+    // Listen for server-started events to keep QR data in sync
+    const unlistenServerPromise = listen<{
+      qr_base64: string;
+      connection_info: { ip: string; port: number; token: string };
+    }>('server-started', (event) => {
+      console.log('Server started event received:', event.payload);
+      setQRData(event.payload);
     });
 
     // Check server status periodically
@@ -61,16 +70,38 @@ export default function Home({ onOpenSettings }: HomeProps) {
 
     // Initial status check and auto-start server
     const initializeServer = async () => {
-      await checkServerStatus();
-      // Auto-start server if not running
-      if (!serverState.is_running) {
+      // First check real server state from backend
+      const state = await invoke<{ is_running: boolean; connected_clients: number }>(
+        'get_server_state'
+      );
+      setServerState(state);
+
+      if (state.is_running) {
+        // Server is already running, get existing QR data instead of starting new server
+        console.log('Server already running, fetching existing QR data...');
+        try {
+          const existingQRData = await invoke<{
+            qr_base64: string;
+            connection_info: { ip: string; port: number; token: string };
+          } | null>('get_current_qr_data');
+          
+          if (existingQRData) {
+            console.log('Retrieved existing QR data with token:', existingQRData.connection_info.token);
+            setQRData(existingQRData);
+          }
+        } catch (err) {
+          console.error('Failed to get existing QR data:', err);
+        }
+      } else {
+        // Server not running, start it
         handleStartServer();
       }
     };
     initializeServer();
 
     return () => {
-      unlistenPromise.then((unlisten) => unlisten());
+      unlistenBarcodePromise.then((unlisten) => unlisten());
+      unlistenServerPromise.then((unlisten) => unlisten());
       if (interval) clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -24,6 +24,7 @@ struct AppState {
     server: Arc<Mutex<Option<WebSocketServer>>>,
     connection_info: Arc<Mutex<Option<ConnectionInfo>>>,
     server_task: Arc<Mutex<Option<JoinHandle<()>>>>,
+    starting: Arc<Mutex<bool>>,  // Prevents concurrent start_server calls
 }
 
 #[tauri::command]
@@ -31,13 +32,41 @@ async fn start_server(
     state: State<'_, AppState>,
     app_handle: AppHandle,
 ) -> Result<QRCodeData, String> {
+    // Check if server is already starting (prevent concurrent calls)
+    let already_starting = {
+        let mut starting = state.starting.lock().unwrap();
+        if *starting {
+            true
+        } else {
+            *starting = true;
+            false
+        }
+    }; // Lock is dropped here before any await
+
+    if already_starting {
+        // Wait a bit and return current QR data if available
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        
+        let connection_info_clone = state.connection_info.lock().unwrap().clone();
+        if let Some(connection_info) = connection_info_clone {
+            let qr_data = generate_qr_code(&connection_info)?;
+            return Ok(qr_data);
+        }
+        return Err("Server is already starting".to_string());
+    }
+
+    // Helper to release the starting lock
+    let release_lock = |state: &State<'_, AppState>| {
+        let mut starting = state.starting.lock().unwrap();
+        *starting = false;
+    };
+
     // Stop existing server if running
     let should_wait = {
         let mut server_lock = state.server.lock().unwrap();
         let mut task_lock = state.server_task.lock().unwrap();
 
         if let Some(existing_server) = server_lock.take() {
-            log::info!("Stopping existing server before starting new one");
             existing_server.shutdown();
 
             // Abort existing server task if it exists
@@ -61,10 +90,6 @@ async fn start_server(
     let token = generate_token();
     let ip = get_local_ip()?;
     let port = 8081;
-
-    log::info!("=== STARTING NEW SERVER ===");
-    log::info!("Generated token for server: {}", token);
-    log::info!("===========================");
 
     let connection_info = ConnectionInfo {
         ip: ip.clone(),
@@ -124,6 +149,14 @@ async fn start_server(
 
     log::info!("Server started on {}:{}", ip, port);
 
+    // Emit event to frontend with QR data (keeps frontend in sync)
+    if let Err(e) = app_handle.emit("server-started", &qr_data) {
+        log::error!("Failed to emit server-started event: {}", e);
+    }
+
+    // Release the starting lock
+    release_lock(&state);
+
     Ok(qr_data)
 }
 
@@ -171,6 +204,22 @@ async fn get_server_state(state: State<'_, AppState>) -> Result<ServerState, Str
         is_running,
         connected_clients,
     })
+}
+
+#[tauri::command]
+async fn get_current_qr_data(state: State<'_, AppState>) -> Result<Option<QRCodeData>, String> {
+    let server_lock = state.server.lock().unwrap();
+    let connection_info_lock = state.connection_info.lock().unwrap();
+
+    // Only return QR data if server is running AND we have connection info
+    if server_lock.is_some() {
+        if let Some(connection_info) = connection_info_lock.as_ref() {
+            let qr_data = generate_qr_code(connection_info)?;
+            return Ok(Some(qr_data));
+        }
+    }
+
+    Ok(None)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -253,11 +302,13 @@ pub fn run() {
             server: Arc::new(Mutex::new(None)),
             connection_info: Arc::new(Mutex::new(None)),
             server_task: Arc::new(Mutex::new(None)),
+            starting: Arc::new(Mutex::new(false)),
         })
         .invoke_handler(tauri::generate_handler![
             start_server,
             stop_server,
             get_server_state,
+            get_current_qr_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
