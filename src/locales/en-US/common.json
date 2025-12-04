@@ -33,6 +33,18 @@
       "subtitle": "Start scanning to see them here"
     }
   },
+  "devices": {
+    "title": "Connected Devices",
+    "description": "Devices currently connected to the server",
+    "refresh": "Refresh list",
+    "status": {
+      "connected": "Connected"
+    },
+    "empty": {
+      "title": "No devices connected",
+      "subtitle": "Scan the QR Code with your phone"
+    }
+  },
   "settings": {
     "title": "Settings",
     "subtitle": "Configure your application preferences",

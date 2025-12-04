@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "scanlink_desktop",
+  "productName": "ScanLink",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.scanlink.desktop",
   "build": {
     "frontendDist": "../build",
     "devUrl": "http://localhost:5173",

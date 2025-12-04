@@ -1,16 +1,25 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useAppStore } from '@/store';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { Play, QrCode, Settings, Square, Trash2, Wifi } from 'lucide-react';
+import { Play, QrCode, Settings, Smartphone, Square, Trash2, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface BarcodeMessage {
-  token: string;
   barcode: string;
   timestamp: string;
+  device_id: string;
+  device_name?: string;
+}
+
+interface ConnectedDevice {
+  deviceId: string;
+  deviceName: string;
+  deviceModel?: string;
+  isConnected: boolean;
 }
 
 interface HomeProps {
@@ -34,6 +43,26 @@ export default function Home({ onOpenSettings }: HomeProps) {
   } = useAppStore();
 
   const [statusCheckInterval, setStatusCheckInterval] = useState<number | null>(null);
+  const [showDevicesSheet, setShowDevicesSheet] = useState(false);
+  const [connectedDevices, setConnectedDevices] = useState<ConnectedDevice[]>([]);
+  const [loadingDevices, setLoadingDevices] = useState(false);
+
+  const fetchConnectedDevices = async () => {
+    setLoadingDevices(true);
+    try {
+      const devices = await invoke<ConnectedDevice[]>('get_connected_devices');
+      setConnectedDevices(devices);
+    } catch (err) {
+      console.error('Failed to fetch connected devices:', err);
+    } finally {
+      setLoadingDevices(false);
+    }
+  };
+
+  const handleOpenDevicesSheet = () => {
+    setShowDevicesSheet(true);
+    fetchConnectedDevices();
+  };
 
   const checkServerStatus = async () => {
     try {
@@ -192,11 +221,22 @@ export default function Home({ onOpenSettings }: HomeProps) {
                   </>
                 )}
               </div>
-              {serverState.is_running && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/40 border border-slate-700/50">
+              {serverState.is_running && serverState.connected_clients > 0 && (
+                <button
+                  onClick={handleOpenDevicesSheet}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/40 border border-slate-700/50 hover:bg-slate-700/50 hover:border-slate-600/50 transition-colors cursor-pointer"
+                >
                   <Wifi className="w-3.5 h-3.5 text-blue-400" />
                   <span className="text-xs font-medium text-slate-300">
                     {serverState.connected_clients} {t(`status.clients${serverState.connected_clients === 1 ? '' : '_plural'}`)}
+                  </span>
+                </button>
+              )}
+              {serverState.is_running && serverState.connected_clients === 0 && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/40 border border-slate-700/50">
+                  <Wifi className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="text-xs font-medium text-slate-400">
+                    {serverState.connected_clients} {t(`status.clients_plural`)}
                   </span>
                 </div>
               )}
@@ -391,6 +431,92 @@ export default function Home({ onOpenSettings }: HomeProps) {
           </div>
         </div>
       </div>
+
+      {/* Connected Devices Sheet */}
+      <Sheet open={showDevicesSheet} onOpenChange={setShowDevicesSheet}>
+        <SheetContent side="right" className="w-full max-w-md">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Smartphone className="w-4 h-4 text-blue-400" />
+              </div>
+              {t('devices.title', 'Dispositivos Conectados')}
+            </SheetTitle>
+            <SheetDescription>
+              {t('devices.description', 'Dispositivos atualmente conectados ao servidor')}
+            </SheetDescription>
+          </SheetHeader>
+          
+          <div className="px-6 pb-6">
+            {loadingDevices ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : connectedDevices.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-slate-800/40 mb-4">
+                  <Smartphone className="w-8 h-8 text-slate-600" />
+                </div>
+                <p className="text-slate-400 text-sm font-medium mb-1">
+                  {t('devices.empty.title', 'Nenhum dispositivo conectado')}
+                </p>
+                <p className="text-slate-600 text-xs">
+                  {t('devices.empty.subtitle', 'Escaneie o QR Code com seu celular')}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {connectedDevices.map((device) => (
+                  <div
+                    key={device.deviceId}
+                    className="bg-slate-800/30 border border-slate-700/30 rounded-xl p-4 hover:bg-slate-800/50 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                        <Smartphone className="w-5 h-5 text-green-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-slate-200 truncate">
+                            {device.deviceName}
+                          </p>
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                            <span className="text-xs text-green-400">
+                              {t('devices.status.connected', 'Conectado')}
+                            </span>
+                          </div>
+                        </div>
+                        {device.deviceModel && (
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {device.deviceModel}
+                          </p>
+                        )}
+                        <p className="text-xs text-slate-600 mt-1 font-mono truncate">
+                          ID: {device.deviceId.substring(0, 8)}...
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {connectedDevices.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-slate-800/50">
+                <Button
+                  onClick={fetchConnectedDevices}
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-slate-700/50 hover:bg-slate-800/60 text-slate-300 hover:text-white"
+                >
+                  {t('devices.refresh', 'Atualizar lista')}
+                </Button>
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

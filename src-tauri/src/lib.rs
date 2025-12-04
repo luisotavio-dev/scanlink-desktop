@@ -1,23 +1,31 @@
+mod keyboard;
+mod mdns_service;
 mod models;
 mod qr_service;
+mod security;
+mod storage;
 mod websocket;
 
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Emitter, State, Manager};
+use tauri::{AppHandle, Emitter, State, Manager, WindowEvent};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
-use models::{BarcodeMessage, ConnectionInfo, QRCodeData, ServerState};
+use models::{BarcodeMessage, ConnectionInfo, QRCodeData, ServerState, DeviceInfo, AppSettings};
 use qr_service::{generate_qr_code, generate_token, get_local_ip};
 use websocket::WebSocketServer;
+use storage::AppConfig;
+use security::AuthorizedDevice;
+use mdns_service::MdnsService;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
 struct BarcodeEvent {
-    token: String,
     barcode: String,
     timestamp: String,
+    device_id: String,
+    device_name: Option<String>,
 }
 
 struct AppState {
@@ -25,6 +33,8 @@ struct AppState {
     connection_info: Arc<Mutex<Option<ConnectionInfo>>>,
     server_task: Arc<Mutex<Option<JoinHandle<()>>>>,
     starting: Arc<Mutex<bool>>,  // Prevents concurrent start_server calls
+    config: Arc<Mutex<AppConfig>>,
+    mdns: Arc<Mutex<Option<MdnsService>>>,
 }
 
 #[tauri::command]
@@ -95,6 +105,7 @@ async fn start_server(
         ip: ip.clone(),
         port,
         token: token.clone(),
+        secret_key: None,  // Secret key is not exposed in QR code for security
     };
 
     // Generate QR code
@@ -103,8 +114,11 @@ async fn start_server(
     // Store connection info
     *state.connection_info.lock().unwrap() = Some(connection_info.clone());
 
-    // Create WebSocket server
-    let ws_server = WebSocketServer::new(token.clone(), port);
+    // Load config for WebSocket server
+    let config = state.config.lock().unwrap().clone();
+
+    // Create WebSocket server with config
+    let ws_server = WebSocketServer::new(token.clone(), port, config);
 
     // Store server instance
     *state.server.lock().unwrap() = Some(ws_server.clone());
@@ -116,7 +130,15 @@ async fn start_server(
     let app_handle_clone = app_handle.clone();
     tokio::spawn(async move {
         while let Some(barcode_msg) = barcode_rx.recv().await {
-            log::info!("Emitting barcode to frontend: {:?}", barcode_msg);
+            log::info!("Received barcode: {}", barcode_msg.barcode);
+
+            // Simulate keyboard typing (like a physical barcode scanner)
+            let barcode_for_typing = barcode_msg.barcode.clone();
+            tokio::task::spawn_blocking(move || {
+                if let Err(e) = keyboard::type_barcode(&barcode_for_typing) {
+                    log::error!("Failed to simulate keyboard input: {}", e);
+                }
+            });
 
             // Convert timestamp to ISO 8601 string
             let timestamp_str = chrono::DateTime::from_timestamp(barcode_msg.timestamp, 0)
@@ -124,9 +146,10 @@ async fn start_server(
                 .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
 
             let event = BarcodeEvent {
-                token: barcode_msg.token,
                 barcode: barcode_msg.barcode,
                 timestamp: timestamp_str,
+                device_id: barcode_msg.device_id,
+                device_name: barcode_msg.device_name,
             };
 
             if let Err(e) = app_handle_clone.emit("barcode-received", event) {
@@ -222,9 +245,124 @@ async fn get_current_qr_data(state: State<'_, AppState>) -> Result<Option<QRCode
     Ok(None)
 }
 
+#[tauri::command]
+async fn get_authorized_devices(state: State<'_, AppState>) -> Result<Vec<AuthorizedDevice>, String> {
+    let config = state.config.lock().unwrap();
+    let devices: Vec<AuthorizedDevice> = config.authorized_devices.values().cloned().collect();
+    Ok(devices)
+}
+
+#[tauri::command]
+async fn get_connected_devices(state: State<'_, AppState>) -> Result<Vec<DeviceInfo>, String> {
+    let server_lock = state.server.lock().unwrap();
+    if let Some(server) = server_lock.as_ref() {
+        Ok(server.get_connected_devices())
+    } else {
+        Ok(vec![])
+    }
+}
+
+#[tauri::command]
+async fn revoke_device(state: State<'_, AppState>, device_id: String) -> Result<(), String> {
+    let mut config = state.config.lock().unwrap();
+    config.remove_device(&device_id);
+    storage::save(&config).map_err(|e| e.to_string())?;
+    log::info!("Device {} revoked", device_id);
+    Ok(())
+}
+
+#[tauri::command]
+async fn revoke_all_devices(state: State<'_, AppState>) -> Result<(), String> {
+    let mut config = state.config.lock().unwrap();
+    config.revoke_all_devices();
+    storage::save(&config).map_err(|e| e.to_string())?;
+    log::info!("All devices revoked");
+    Ok(())
+}
+
+#[tauri::command]
+async fn regenerate_token(state: State<'_, AppState>, app_handle: AppHandle) -> Result<QRCodeData, String> {
+    // This generates a new master token, invalidating all existing pairing tokens
+    // Existing paired devices will still work (they use auth_token, not master_token)
+
+    // First stop the server if running
+    {
+        let mut server_lock = state.server.lock().unwrap();
+        let mut task_lock = state.server_task.lock().unwrap();
+
+        if let Some(server) = server_lock.take() {
+            server.shutdown();
+        }
+        if let Some(task) = task_lock.take() {
+            task.abort();
+        }
+    }
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+
+    // Start server with new token
+    start_server(state, app_handle).await
+}
+
+#[tauri::command]
+async fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, String> {
+    let config = state.config.lock().unwrap();
+    Ok(AppSettings {
+        auto_start: config.auto_start,
+        minimize_to_tray: config.minimize_to_tray,
+        start_minimized: config.start_minimized,
+    })
+}
+
+#[tauri::command]
+async fn update_settings(
+    state: State<'_, AppState>,
+    app_handle: AppHandle,
+    settings: AppSettings,
+) -> Result<(), String> {
+    {
+        let mut config = state.config.lock().unwrap();
+        config.auto_start = settings.auto_start;
+        config.minimize_to_tray = settings.minimize_to_tray;
+        config.start_minimized = settings.start_minimized;
+        storage::save(&config).map_err(|e| e.to_string())?;
+    }
+
+    // Update autostart
+    #[cfg(desktop)]
+    {
+        use tauri_plugin_autostart::ManagerExt;
+        let autostart_manager = app_handle.autolaunch();
+        if settings.auto_start {
+            let _ = autostart_manager.enable();
+            log::info!("Autostart enabled");
+        } else {
+            let _ = autostart_manager.disable();
+            log::info!("Autostart disabled");
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Load configuration
+    let config = storage::load();
+
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            // Focus the main window when attempting to launch another instance
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }))
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -233,6 +371,51 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            // Check if started minimized
+            let state = app.state::<AppState>();
+            let start_minimized = {
+                let config = state.config.lock().unwrap();
+                config.start_minimized
+            };
+
+            // Handle minimize-to-tray on close
+            let minimize_to_tray = {
+                let config = state.config.lock().unwrap();
+                config.minimize_to_tray
+            };
+
+            if let Some(window) = app.get_webview_window("main") {
+                if start_minimized {
+                    let _ = window.hide();
+                }
+
+                // Setup close handler for minimize-to-tray
+                let window_clone = window.clone();
+                let minimize_to_tray_flag = minimize_to_tray;
+                window.on_window_event(move |event| {
+                    if let WindowEvent::CloseRequested { api, .. } = event {
+                        if minimize_to_tray_flag {
+                            api.prevent_close();
+                            let _ = window_clone.hide();
+                        }
+                    }
+                });
+            }
+
+            // Auto-start server on launch
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                // Small delay to ensure app is fully initialized
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+                let state = app_handle.state::<AppState>();
+                if let Err(e) = start_server(state, app_handle.clone()).await {
+                    log::error!("Failed to auto-start server: {}", e);
+                } else {
+                    log::info!("Server auto-started successfully");
+                }
+            });
 
             // Create system tray menu
             let show_item = MenuItem::with_id(app, "show", "Abrir", true, None::<&str>)?;
@@ -303,12 +486,21 @@ pub fn run() {
             connection_info: Arc::new(Mutex::new(None)),
             server_task: Arc::new(Mutex::new(None)),
             starting: Arc::new(Mutex::new(false)),
+            config: Arc::new(Mutex::new(config)),
+            mdns: Arc::new(Mutex::new(None)),
         })
         .invoke_handler(tauri::generate_handler![
             start_server,
             stop_server,
             get_server_state,
             get_current_qr_data,
+            get_authorized_devices,
+            get_connected_devices,
+            revoke_device,
+            revoke_all_devices,
+            regenerate_token,
+            get_settings,
+            update_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

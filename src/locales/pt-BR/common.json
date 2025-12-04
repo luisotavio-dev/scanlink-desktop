@@ -33,6 +33,18 @@
       "subtitle": "Comece a escanear para vê-los aqui"
     }
   },
+  "devices": {
+    "title": "Dispositivos Conectados",
+    "description": "Dispositivos atualmente conectados ao servidor",
+    "refresh": "Atualizar lista",
+    "status": {
+      "connected": "Conectado"
+    },
+    "empty": {
+      "title": "Nenhum dispositivo conectado",
+      "subtitle": "Escaneie o QR Code com seu celular"
+    }
+  },
   "settings": {
     "title": "Configurações",
     "subtitle": "Configure as preferências da aplicação",
