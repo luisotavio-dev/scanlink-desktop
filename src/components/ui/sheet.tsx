@@ -1,6 +1,6 @@
-import * as React from "react"
 import { cn } from "@/lib/utils"
 import { X } from "lucide-react"
+import * as React from "react"
 
 interface SheetProps {
   open: boolean
@@ -47,13 +47,13 @@ export function Sheet({ open, onOpenChange, children }: SheetProps) {
 
 export function SheetTrigger({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) {
   const { onOpenChange } = React.useContext(SheetContext)
-  
+
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children as React.ReactElement<{ onClick?: () => void }>, {
       onClick: () => onOpenChange(true),
     })
   }
-  
+
   return (
     <button onClick={() => onOpenChange(true)}>
       {children}
@@ -86,11 +86,11 @@ export function SheetContent({ children, className, side = "right" }: SheetConte
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm animate-in fade-in-0"
         onClick={() => onOpenChange(false)}
       />
-      
+
       {/* Sheet */}
       <div
         data-state={open ? "open" : "closed"}

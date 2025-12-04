@@ -50,7 +50,19 @@ impl WebSocketServer {
     }
 
     pub fn get_connected_count(&self) -> usize {
-        self.clients.lock().unwrap().len()
+        // Count only authenticated clients with unique device_ids
+        let clients = self.clients.lock().unwrap();
+        let mut unique_devices: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+        for client in clients.values() {
+            if client.authenticated {
+                if let Some(ref device_id) = client.device_id {
+                    unique_devices.insert(device_id.clone());
+                }
+            }
+        }
+
+        unique_devices.len()
     }
 
     pub fn get_connected_devices(&self) -> Vec<DeviceInfo> {
@@ -267,6 +279,24 @@ fn send_error(clients: &Clients, client_id: usize, message: &str) {
     send_to_client(clients, client_id, &error);
 }
 
+/// Remove any existing connection from the same device to avoid duplicates
+fn remove_previous_device_connection(clients: &Clients, device_id: &str, current_client_id: usize) {
+    let mut clients_guard = clients.lock().unwrap();
+    let old_client_ids: Vec<usize> = clients_guard
+        .iter()
+        .filter(|(id, info)| {
+            **id != current_client_id &&
+            info.device_id.as_deref() == Some(device_id)
+        })
+        .map(|(id, _)| *id)
+        .collect();
+
+    for old_id in old_client_ids {
+        log::info!("Removing old connection {} for device {}", old_id, device_id);
+        clients_guard.remove(&old_id);
+    }
+}
+
 fn handle_pair_request(
     clients: &Clients,
     client_id: usize,
@@ -308,6 +338,9 @@ fn handle_pair_request(
     if let Ok(cfg) = config.lock() {
         let _ = storage::save(&cfg);
     }
+
+    // Remove any old connection from this device
+    remove_previous_device_connection(clients, &request.device_id, client_id);
 
     // Update client info
     if let Some(client) = clients.lock().unwrap().get_mut(&client_id) {
@@ -382,6 +415,9 @@ fn handle_reconnect_request(
     if let Ok(cfg) = config.lock() {
         let _ = storage::save(&cfg);
     }
+
+    // Remove any old connection from this device
+    remove_previous_device_connection(clients, &request.device_id, client_id);
 
     // Update client info
     let device_name = {

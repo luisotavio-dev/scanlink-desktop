@@ -446,7 +446,7 @@ export default function Home({ onOpenSettings }: HomeProps) {
               {t('devices.description', 'Dispositivos atualmente conectados ao servidor')}
             </SheetDescription>
           </SheetHeader>
-          
+
           <div className="px-6 pb-6">
             {loadingDevices ? (
               <div className="flex items-center justify-center py-12">
@@ -501,7 +501,7 @@ export default function Home({ onOpenSettings }: HomeProps) {
                 ))}
               </div>
             )}
-            
+
             {connectedDevices.length > 0 && (
               <div className="mt-6 pt-4 border-t border-slate-800/50">
                 <Button
