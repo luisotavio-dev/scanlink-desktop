@@ -1,0 +1,54 @@
+{
+  "app": {
+    "title": "ScanLink Desktop",
+    "subtitle": "Real-time barcode scanning system"
+  },
+  "status": {
+    "online": "Online",
+    "offline": "Offline",
+    "clients": "connected app",
+    "clients_plural": "connected apps"
+  },
+  "connection": {
+    "title": "Connection",
+    "serverActive": "Server is active",
+    "startToReceive": "Start server to receive barcodes",
+    "startServer": "Start Server",
+    "stopServer": "Stop Server",
+    "starting": "Starting...",
+    "stopping": "Stopping..."
+  },
+  "qrCode": {
+    "title": "Scan to Connect",
+    "ipAddress": "IP Address",
+    "port": "Port"
+  },
+  "barcodes": {
+    "title": "Received Barcodes",
+    "count": "{{count}} barcode scanned",
+    "count_plural": "{{count}} barcodes scanned",
+    "clear": "Clear",
+    "empty": {
+      "title": "No barcodes yet",
+      "subtitle": "Start scanning to see them here"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Configure your application preferences",
+    "sections": {
+      "language": {
+        "title": "Language",
+        "description": "Choose your preferred language"
+      },
+      "application": {
+        "title": "Application Behavior",
+        "description": "Configure how the application behaves",
+        "minimizeToTray": {
+          "label": "Minimize to System Tray",
+          "description": "When closing the window, keep the app running in the system tray instead of exiting"
+        }
+      }
+    }
+  }
+}

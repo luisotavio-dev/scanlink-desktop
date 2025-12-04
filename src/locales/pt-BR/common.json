@@ -1,0 +1,54 @@
+{
+  "app": {
+    "title": "ScanLink Desktop",
+    "subtitle": "Sistema de leitura de código de barras em tempo real"
+  },
+  "status": {
+    "online": "Online",
+    "offline": "Offline",
+    "clients": "app conectado",
+    "clients_plural": "apps conectados"
+  },
+  "connection": {
+    "title": "Conexão",
+    "serverActive": "Servidor está ativo",
+    "startToReceive": "Inicie o servidor para receber códigos de barras",
+    "startServer": "Iniciar Servidor",
+    "stopServer": "Parar Servidor",
+    "starting": "Iniciando...",
+    "stopping": "Parando..."
+  },
+  "qrCode": {
+    "title": "Escaneie para Conectar",
+    "ipAddress": "Endereço IP",
+    "port": "Porta"
+  },
+  "barcodes": {
+    "title": "Códigos de Barras Recebidos",
+    "count": "{{count}} código de barras escaneado",
+    "count_plural": "{{count}} códigos de barras escaneados",
+    "clear": "Limpar",
+    "empty": {
+      "title": "Nenhum código de barras ainda",
+      "subtitle": "Comece a escanear para vê-los aqui"
+    }
+  },
+  "settings": {
+    "title": "Configurações",
+    "subtitle": "Configure as preferências da aplicação",
+    "sections": {
+      "language": {
+        "title": "Idioma",
+        "description": "Escolha seu idioma preferido"
+      },
+      "application": {
+        "title": "Comportamento da Aplicação",
+        "description": "Configure como a aplicação se comporta",
+        "minimizeToTray": {
+          "label": "Minimizar para Bandeja do Sistema",
+          "description": "Ao fechar a janela, manter o app rodando na bandeja do sistema ao invés de sair completamente"
+        }
+      }
+    }
+  }
+}
