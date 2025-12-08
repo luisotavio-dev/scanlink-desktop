@@ -66,19 +66,21 @@ export default function Home({ onOpenSettings }: HomeProps) {
 
   const checkServerStatus = async () => {
     try {
+      console.log('[DEBUG] Checking server status...');
       const state = await invoke<{ is_running: boolean; connected_clients: number }>(
         'get_server_state'
       );
+      console.log('[DEBUG] Server status:', state);
       setServerState(state);
     } catch (err) {
-      console.error('Failed to check server status:', err);
+      console.error('[ERROR] Failed to check server status:', err);
     }
   };
 
   useEffect(() => {
     // Listen for barcode events from backend
     const unlistenBarcodePromise = listen<BarcodeMessage>('barcode-received', (event) => {
-      console.log('Barcode received:', event.payload);
+      console.log('[DEBUG] Barcode received event:', event.payload);
       addBarcode(event.payload.barcode, event.payload.timestamp);
     });
 
@@ -87,7 +89,11 @@ export default function Home({ onOpenSettings }: HomeProps) {
       qr_base64: string;
       connection_info: { ip: string; port: number; token: string };
     }>('server-started', (event) => {
-      console.log('Server started event received:', event.payload);
+      console.log('[DEBUG] Server started event received:', {
+        ip: event.payload.connection_info.ip,
+        port: event.payload.connection_info.port,
+        tokenLength: event.payload.connection_info.token.length,
+      });
       setQRData(event.payload);
     });
 
@@ -99,15 +105,17 @@ export default function Home({ onOpenSettings }: HomeProps) {
 
     // Initial status check and auto-start server
     const initializeServer = async () => {
+      console.log('[DEBUG] Initializing server...');
       // First check real server state from backend
       const state = await invoke<{ is_running: boolean; connected_clients: number }>(
         'get_server_state'
       );
+      console.log('[DEBUG] Server state:', state);
       setServerState(state);
 
       if (state.is_running) {
         // Server is already running, get existing QR data instead of starting new server
-        console.log('Server already running, fetching existing QR data...');
+        console.log('[DEBUG] Server already running, fetching existing QR data...');
         try {
           const existingQRData = await invoke<{
             qr_base64: string;
@@ -115,14 +123,15 @@ export default function Home({ onOpenSettings }: HomeProps) {
           } | null>('get_current_qr_data');
 
           if (existingQRData) {
-            console.log('Retrieved existing QR data with token:', existingQRData.connection_info.token);
+            console.log('[DEBUG] Retrieved existing QR data with token:', existingQRData.connection_info.token.substring(0, 8) + '...');
             setQRData(existingQRData);
           }
         } catch (err) {
-          console.error('Failed to get existing QR data:', err);
+          console.error('[ERROR] Failed to get existing QR data:', err);
         }
       } else {
         // Server not running, start it
+        console.log('[DEBUG] Server not running, starting...');
         handleStartServer();
       }
     };
@@ -148,17 +157,26 @@ export default function Home({ onOpenSettings }: HomeProps) {
   const handleStartServer = async () => {
     setLoading(true);
     setError(null);
+    console.log('[DEBUG] handleStartServer called');
     try {
+      console.log('[DEBUG] Invoking start_server command');
       const qrData = await invoke<{
         qr_base64: string;
         connection_info: { ip: string; port: number; token: string };
       }>('start_server');
 
+      console.log('[DEBUG] start_server response received');
+      console.log('[DEBUG] QR Data:', {
+        ip: qrData.connection_info.ip,
+        port: qrData.connection_info.port,
+        tokenLength: qrData.connection_info.token.length,
+      });
+
       setQRData(qrData);
       await checkServerStatus();
     } catch (err) {
+      console.error('[ERROR] Failed to start server:', err);
       setError(err as string);
-      console.error('Failed to start server:', err);
     } finally {
       setLoading(false);
     }
@@ -167,13 +185,16 @@ export default function Home({ onOpenSettings }: HomeProps) {
   const handleStopServer = async () => {
     setLoading(true);
     setError(null);
+    console.log('[DEBUG] handleStopServer called');
     try {
+      console.log('[DEBUG] Invoking stop_server command');
       await invoke('stop_server');
+      console.log('[DEBUG] Server stopped');
       setQRData(null);
       await checkServerStatus();
     } catch (err) {
+      console.error('[ERROR] Failed to stop server:', err);
       setError(err as string);
-      console.error('Failed to stop server:', err);
     } finally {
       setLoading(false);
     }
@@ -189,53 +210,55 @@ export default function Home({ onOpenSettings }: HomeProps) {
   };
 
   return (
-    <div className="h-screen bg-[#0f1419] text-white flex flex-col overflow-hidden">
+    <div className="h-screen bg-[var(--background)] text-[var(--foreground)] flex flex-col overflow-hidden transition-colors duration-200">
       {/* Header */}
-      <div className="border-b border-slate-800/50 bg-[#1a1f2e]/80 backdrop-blur-sm">
+      <div className="border-b border-[var(--border)] bg-[var(--background-secondary)]/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <QrCode className="w-6 h-6 text-white" />
-              </div>
+              <img
+                src="/src/assets/launcher_icon.png"
+                alt="ScanLink"
+                className="w-10 h-10 rounded-lg shadow-theme"
+              />
               <div>
-                <h1 className="text-xl font-semibold text-white">
+                <h1 className="text-xl font-semibold text-[var(--foreground)]">
                   {t('app.title')}
                 </h1>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-[var(--foreground-muted)]">
                   {t('app.subtitle')}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/40 border border-slate-700/50">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface)]/40 border border-[var(--border)]">
                 {serverState.is_running ? (
                   <>
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-xs font-medium text-slate-300">{t('status.online')}</span>
+                    <div className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse" />
+                    <span className="text-xs font-medium text-[var(--foreground-secondary)]">{t('status.online')}</span>
                   </>
                 ) : (
                   <>
-                    <div className="w-2 h-2 rounded-full bg-slate-500" />
-                    <span className="text-xs font-medium text-slate-400">{t('status.offline')}</span>
+                    <div className="w-2 h-2 rounded-full bg-[var(--foreground-muted)]" />
+                    <span className="text-xs font-medium text-[var(--foreground-muted)]">{t('status.offline')}</span>
                   </>
                 )}
               </div>
               {serverState.is_running && serverState.connected_clients > 0 && (
                 <button
                   onClick={handleOpenDevicesSheet}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/40 border border-slate-700/50 hover:bg-slate-700/50 hover:border-slate-600/50 transition-colors cursor-pointer"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface)]/40 border border-[var(--border)] hover:bg-[var(--surface-hover)]/50 hover:border-[var(--border)] transition-colors cursor-pointer"
                 >
-                  <Wifi className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="text-xs font-medium text-slate-300">
+                  <Wifi className="w-3.5 h-3.5 text-[var(--primary)]" />
+                  <span className="text-xs font-medium text-[var(--foreground-secondary)]">
                     {serverState.connected_clients} {t(`status.clients${serverState.connected_clients === 1 ? '' : '_plural'}`)}
                   </span>
                 </button>
               )}
               {serverState.is_running && serverState.connected_clients === 0 && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/40 border border-slate-700/50">
-                  <Wifi className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="text-xs font-medium text-slate-400">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface)]/40 border border-[var(--border)]">
+                  <Wifi className="w-3.5 h-3.5 text-[var(--foreground-muted)]" />
+                  <span className="text-xs font-medium text-[var(--foreground-muted)]">
                     {serverState.connected_clients} {t(`status.clients_plural`)}
                   </span>
                 </div>
@@ -244,7 +267,7 @@ export default function Home({ onOpenSettings }: HomeProps) {
                 variant="ghost"
                 size="icon"
                 onClick={onOpenSettings}
-                className="h-9 w-9 hover:bg-slate-800/60 text-slate-400 hover:text-slate-200 rounded-lg"
+                className="h-9 w-9 rounded-lg"
               >
                 <Settings className="w-4 h-4" />
               </Button>
@@ -260,16 +283,16 @@ export default function Home({ onOpenSettings }: HomeProps) {
             {/* Left Column - QR Code & Controls */}
             <div className="lg:col-span-1 space-y-4">
               {/* Server Control Card */}
-              <Card className="bg-[#1a1f2e]/60 border-slate-800/50 shadow-xl">
+              <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold text-white">{t('connection.title')}</CardTitle>
-                  <CardDescription className="text-xs text-slate-400">
+                  <CardTitle className="text-base font-semibold">{t('connection.title')}</CardTitle>
+                  <CardDescription className="text-xs">
                     {serverState.is_running ? t('connection.serverActive') : t('connection.startToReceive')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {error && (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-400 text-xs">
+                    <div className="bg-[var(--error-muted)] border border-[var(--error)]/30 rounded-lg p-3 text-[var(--error)] text-xs">
                       {error}
                     </div>
                   )}
@@ -278,7 +301,7 @@ export default function Home({ onOpenSettings }: HomeProps) {
                     <Button
                       onClick={handleStartServer}
                       disabled={isLoading}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-lg shadow-blue-600/20"
+                      className="w-full"
                       size="default"
                     >
                       <Play className="w-4 h-4 mr-2" />
@@ -288,7 +311,8 @@ export default function Home({ onOpenSettings }: HomeProps) {
                     <Button
                       onClick={handleStopServer}
                       disabled={isLoading}
-                      className="w-full bg-slate-700 hover:bg-slate-600 text-white font-medium"
+                      variant="secondary"
+                      className="w-full"
                       size="default"
                     >
                       <Square className="w-4 h-4 mr-2" />
@@ -300,11 +324,11 @@ export default function Home({ onOpenSettings }: HomeProps) {
 
               {/* QR Code Card */}
               {qrData && (
-                <Card className="bg-[#1a1f2e]/60 border-slate-800/50 shadow-xl">
+                <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold flex items-center gap-2 text-white">
-                      <div className="w-6 h-6 rounded bg-blue-500/10 flex items-center justify-center">
-                        <QrCode className="w-4 h-4 text-blue-400" />
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <div className="w-6 h-6 rounded bg-[var(--primary-muted)] flex items-center justify-center">
+                        <QrCode className="w-4 h-4 text-[var(--primary)]" />
                       </div>
                       {t('qrCode.title')}
                     </CardTitle>
@@ -320,17 +344,17 @@ export default function Home({ onOpenSettings }: HomeProps) {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs bg-slate-800/30 px-3 py-2.5 rounded-lg border border-slate-700/30">
-                        <span className="text-slate-400">{t('qrCode.ipAddress')}</span>
-                        <span className="font-mono text-slate-200 font-medium">{qrData.connection_info.ip}</span>
+                      <div className="flex items-center justify-between text-xs bg-[var(--surface)]/30 px-3 py-2.5 rounded-lg border border-[var(--border-subtle)]">
+                        <span className="text-[var(--foreground-muted)]">{t('qrCode.ipAddress')}</span>
+                        <span className="font-mono text-[var(--foreground)] font-medium">{qrData.connection_info.ip}</span>
                       </div>
-                      <div className="flex items-center justify-between text-xs bg-slate-800/30 px-3 py-2.5 rounded-lg border border-slate-700/30">
-                        <span className="text-slate-400">{t('qrCode.port')}</span>
-                        <span className="font-mono text-slate-200 font-medium">{qrData.connection_info.port}</span>
+                      <div className="flex items-center justify-between text-xs bg-[var(--surface)]/30 px-3 py-2.5 rounded-lg border border-[var(--border-subtle)]">
+                        <span className="text-[var(--foreground-muted)]">{t('qrCode.port')}</span>
+                        <span className="font-mono text-[var(--foreground)] font-medium">{qrData.connection_info.port}</span>
                       </div>
-                      <div className="flex flex-col gap-1 text-xs bg-amber-500/10 px-3 py-2.5 rounded-lg border border-amber-500/30">
-                        <span className="text-amber-400 font-medium">Token (Debug)</span>
-                        <span className="font-mono text-amber-200 text-[10px] break-all">{qrData.connection_info.token}</span>
+                      <div className="flex flex-col gap-1 text-xs bg-[var(--warning-muted)] px-3 py-2.5 rounded-lg border border-[var(--warning)]/30">
+                        <span className="text-[var(--warning)] font-medium">Token (Debug)</span>
+                        <span className="font-mono text-[var(--warning)] text-[10px] break-all opacity-80">{qrData.connection_info.token}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -340,12 +364,12 @@ export default function Home({ onOpenSettings }: HomeProps) {
 
             {/* Right Column - Barcode List */}
             <div className="lg:col-span-2 flex flex-col overflow-hidden">
-              <Card className="bg-[#1a1f2e]/60 border-slate-800/50 shadow-xl flex flex-col h-full overflow-hidden">
-                <CardHeader className="pb-4 border-b border-slate-800/50">
+              <Card className="flex flex-col h-full overflow-hidden">
+                <CardHeader className="pb-4 border-b border-[var(--border)]">
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-base font-semibold text-white">{t('barcodes.title')}</CardTitle>
-                      <CardDescription className="text-xs text-slate-400 mt-1">
+                      <CardTitle className="text-base font-semibold">{t('barcodes.title')}</CardTitle>
+                      <CardDescription className="text-xs mt-1">
                         {t(`barcodes.count${barcodes.length === 1 ? '' : '_plural'}`, { count: barcodes.length })}
                       </CardDescription>
                     </div>
@@ -354,7 +378,7 @@ export default function Home({ onOpenSettings }: HomeProps) {
                         onClick={clearBarcodes}
                         variant="outline"
                         size="sm"
-                        className="border-slate-700/50 hover:bg-slate-800/60 text-slate-300 hover:text-white h-8 text-xs"
+                        className="h-8 text-xs"
                       >
                         <Trash2 className="w-3.5 h-3.5 mr-1.5" />
                         {t('barcodes.clear')}
@@ -365,13 +389,13 @@ export default function Home({ onOpenSettings }: HomeProps) {
                 <CardContent className="flex-1 overflow-hidden flex flex-col p-0">
                   {barcodes.length === 0 ? (
                     <div className="text-center flex-1 flex flex-col items-center justify-center p-8">
-                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-slate-800/40 mb-4">
-                        <QrCode className="w-8 h-8 text-slate-600" />
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-[var(--surface)]/40 mb-4">
+                        <QrCode className="w-8 h-8 text-[var(--foreground-muted)]" />
                       </div>
-                      <p className="text-slate-400 text-sm font-medium mb-1">
+                      <p className="text-[var(--foreground-muted)] text-sm font-medium mb-1">
                         {t('barcodes.empty.title')}
                       </p>
-                      <p className="text-slate-600 text-xs">
+                      <p className="text-[var(--foreground-muted)] text-xs opacity-60">
                         {t('barcodes.empty.subtitle')}
                       </p>
                     </div>
@@ -381,26 +405,26 @@ export default function Home({ onOpenSettings }: HomeProps) {
                         {barcodes.map((item: { id: string; barcode: string; timestamp: string }, index: number) => (
                           <div
                             key={item.id}
-                            className="group relative bg-slate-800/30 hover:bg-slate-800/50 border border-slate-700/30 hover:border-slate-600/50 rounded-lg p-3.5 transition-all duration-150"
+                            className="group relative bg-[var(--surface)]/30 hover:bg-[var(--surface)]/50 border border-[var(--border-subtle)] hover:border-[var(--border)] rounded-lg p-3.5 transition-all duration-150"
                           >
                             <div className="flex items-center gap-3">
-                              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                                <span className="text-xs font-semibold text-blue-400">
+                              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[var(--primary-muted)] border border-[var(--primary)]/20 flex items-center justify-center">
+                                <span className="text-xs font-semibold text-[var(--primary)]">
                                   {barcodes.length - index}
                                 </span>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-mono text-sm font-medium text-slate-200 truncate">
+                                <p className="font-mono text-sm font-medium text-[var(--foreground)] truncate">
                                   {item.barcode}
                                 </p>
-                                <p className="text-xs text-slate-500 mt-0.5">
+                                <p className="text-xs text-[var(--foreground-muted)] mt-0.5">
                                   {formatTimestamp(item.timestamp)}
                                 </p>
                               </div>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0 hover:bg-slate-700/50 transition-opacity"
+                                className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0 transition-opacity"
                                 onClick={() => navigator.clipboard.writeText(item.barcode)}
                               >
                                 <svg
@@ -413,7 +437,7 @@ export default function Home({ onOpenSettings }: HomeProps) {
                                   strokeWidth="2"
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
-                                  className="text-slate-400"
+                                  className="text-[var(--foreground-muted)]"
                                 >
                                   <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
                                   <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
@@ -437,8 +461,8 @@ export default function Home({ onOpenSettings }: HomeProps) {
         <SheetContent side="right" className="w-full max-w-md">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Smartphone className="w-4 h-4 text-blue-400" />
+              <div className="w-8 h-8 rounded-lg bg-[var(--primary-muted)] flex items-center justify-center">
+                <Smartphone className="w-4 h-4 text-[var(--primary)]" />
               </div>
               {t('devices.title', 'Dispositivos Conectados')}
             </SheetTitle>
@@ -450,17 +474,17 @@ export default function Home({ onOpenSettings }: HomeProps) {
           <div className="px-6 pb-6">
             {loadingDevices ? (
               <div className="flex items-center justify-center py-12">
-                <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : connectedDevices.length === 0 ? (
               <div className="text-center py-12">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-slate-800/40 mb-4">
-                  <Smartphone className="w-8 h-8 text-slate-600" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-[var(--surface)]/40 mb-4">
+                  <Smartphone className="w-8 h-8 text-[var(--foreground-muted)]" />
                 </div>
-                <p className="text-slate-400 text-sm font-medium mb-1">
+                <p className="text-[var(--foreground-muted)] text-sm font-medium mb-1">
                   {t('devices.empty.title', 'Nenhum dispositivo conectado')}
                 </p>
-                <p className="text-slate-600 text-xs">
+                <p className="text-[var(--foreground-muted)] text-xs opacity-60">
                   {t('devices.empty.subtitle', 'Escaneie o QR Code com seu celular')}
                 </p>
               </div>
@@ -469,30 +493,30 @@ export default function Home({ onOpenSettings }: HomeProps) {
                 {connectedDevices.map((device) => (
                   <div
                     key={device.deviceId}
-                    className="bg-slate-800/30 border border-slate-700/30 rounded-xl p-4 hover:bg-slate-800/50 transition-colors"
+                    className="bg-[var(--surface)]/30 border border-[var(--border-subtle)] rounded-xl p-4 hover:bg-[var(--surface)]/50 transition-colors"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-                        <Smartphone className="w-5 h-5 text-green-400" />
+                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[var(--success-muted)] border border-[var(--success)]/20 flex items-center justify-center">
+                        <Smartphone className="w-5 h-5 text-[var(--success)]" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-slate-200 truncate">
+                          <p className="font-medium text-[var(--foreground)] truncate">
                             {device.deviceName}
                           </p>
                           <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                            <span className="text-xs text-green-400">
+                            <div className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse" />
+                            <span className="text-xs text-[var(--success)]">
                               {t('devices.status.connected', 'Conectado')}
                             </span>
                           </div>
                         </div>
                         {device.deviceModel && (
-                          <p className="text-xs text-slate-500 mt-0.5">
+                          <p className="text-xs text-[var(--foreground-muted)] mt-0.5">
                             {device.deviceModel}
                           </p>
                         )}
-                        <p className="text-xs text-slate-600 mt-1 font-mono truncate">
+                        <p className="text-xs text-[var(--foreground-muted)] mt-1 font-mono truncate opacity-60">
                           ID: {device.deviceId.substring(0, 8)}...
                         </p>
                       </div>
@@ -503,12 +527,12 @@ export default function Home({ onOpenSettings }: HomeProps) {
             )}
 
             {connectedDevices.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-slate-800/50">
+              <div className="mt-6 pt-4 border-t border-[var(--border)]">
                 <Button
                   onClick={fetchConnectedDevices}
                   variant="outline"
                   size="sm"
-                  className="w-full border-slate-700/50 hover:bg-slate-800/60 text-slate-300 hover:text-white"
+                  className="w-full"
                 >
                   {t('devices.refresh', 'Atualizar lista')}
                 </Button>

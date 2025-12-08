@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './App.css'
+import { useTheme } from './hooks/useTheme'
 import Home from './pages/Home'
 import Settings from './pages/Settings'
 
@@ -7,6 +8,9 @@ type Page = 'home' | 'settings'
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home')
+
+  // Initialize theme on app load
+  useTheme()
 
   return (
     <>

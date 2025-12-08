@@ -117,6 +117,8 @@ impl WebSocketServer {
 
         log::info!("WebSocket server starting on port {}", self.port);
 
+        log::info!("WebSocket server starting on port {}", self.port);
+
         let (_, server) = warp::serve(routes)
             .bind_with_graceful_shutdown(([0, 0, 0, 0], self.port), async move {
                 shutdown_rx.recv().await;
@@ -305,10 +307,11 @@ fn handle_pair_request(
     config: &Arc<Mutex<AppConfig>>,
 ) {
     log::info!("Pair request from device {} ({})", request.device_id, request.device_name);
+    log::debug!("Pair request details: token_len={}, master_token_len={}, match={}", request.master_token.len(), master_token.len(), request.master_token == master_token);
 
     // Validate master token from QR code
     if request.master_token != master_token {
-        log::warn!("Invalid master token from device {}", request.device_id);
+        log::warn!("Invalid master token from device {}: token_mismatch", request.device_id);
         send_error(clients, client_id, "Invalid pairing token");
         return;
     }
@@ -316,11 +319,13 @@ fn handle_pair_request(
     // Get or create secret key
     let mut cfg = config.lock().unwrap();
     if cfg.secret_key.is_none() {
+        log::debug!("Generating new secret key for device {}", request.device_id);
         cfg.secret_key = Some(security::generate_secret_key());
     }
     let secret_key = cfg.secret_key.clone().unwrap();
 
     // Create auth token for this device
+    log::debug!("Creating auth token for device {}", request.device_id);
     let auth_token = security::create_auth_token(&request.device_id, &secret_key);
 
     // Add device to authorized list
@@ -331,12 +336,17 @@ fn handle_pair_request(
         paired_at: chrono::Utc::now().to_rfc3339(),
         last_seen: chrono::Utc::now().to_rfc3339(),
     };
+    log::debug!("Adding device to authorized devices list");
     cfg.add_device(device);
 
     // Save config
     drop(cfg);
     if let Ok(cfg) = config.lock() {
-        let _ = storage::save(&cfg);
+        if let Err(e) = storage::save(&cfg) {
+            log::error!("Failed to save config: {}", e);
+        } else {
+            log::debug!("Config saved successfully");
+        }
     }
 
     // Remove any old connection from this device
@@ -347,6 +357,7 @@ fn handle_pair_request(
         client.authenticated = true;
         client.device_id = Some(request.device_id.clone());
         client.device_name = Some(request.device_name.clone());
+        log::debug!("Client {} updated as authenticated", client_id);
     }
 
     log::info!("Device {} paired successfully", request.device_id);
@@ -359,7 +370,9 @@ fn handle_pair_request(
         "device_id": request.device_id,
         "timestamp": chrono::Utc::now().timestamp()
     });
+    log::debug!("Sending pair_ack to client {} for device {}", client_id, request.device_id);
     send_to_client(clients, client_id, &response);
+    log::debug!("Pair_ack sent successfully");
 }
 
 fn handle_reconnect_request(

@@ -130,8 +130,9 @@ async fn start_server(
     // Spawn task to handle barcode messages and emit to frontend
     let app_handle_clone = app_handle.clone();
     tokio::spawn(async move {
+        log::debug!("Barcode handler task started");
         while let Some(barcode_msg) = barcode_rx.recv().await {
-            log::info!("Received barcode: {}", barcode_msg.barcode);
+            log::info!("Received barcode: {} from device: {}", barcode_msg.barcode, barcode_msg.device_id);
 
             // Simulate keyboard typing (like a physical barcode scanner)
             let barcode_for_typing = barcode_msg.barcode.clone();
@@ -161,7 +162,7 @@ async fn start_server(
 
     // Start WebSocket server in background
     let server_handle = tokio::spawn(async move {
-        log::info!("WebSocket server task started with token: {}", ws_server.token);
+        log::info!("WebSocket server task started with token: {} on port: {}", ws_server.token, ws_server.port);
         if let Err(e) = ws_server.start(barcode_tx).await {
             log::error!("WebSocket server error: {}", e);
         }
@@ -180,6 +181,8 @@ async fn start_server(
 
     // Release the starting lock
     release_lock(&state);
+
+    log::info!("=== START_SERVER COMPLETED SUCCESSFULLY ===");
 
     Ok(qr_data)
 }

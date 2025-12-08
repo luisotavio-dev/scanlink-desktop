@@ -95,7 +95,7 @@ export function SheetContent({ children, className, side = "right" }: SheetConte
       <div
         data-state={open ? "open" : "closed"}
         className={cn(
-          "fixed z-50 bg-[#1a1f2e] border-slate-800/50 shadow-2xl",
+          "fixed z-50 bg-[var(--background-card)] border-[var(--border)] shadow-theme-lg",
           "animate-in duration-300",
           side === "right" && "slide-in-from-right border-l",
           side === "left" && "slide-in-from-left border-r",
@@ -107,7 +107,7 @@ export function SheetContent({ children, className, side = "right" }: SheetConte
       >
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 rounded-lg p-1.5 hover:bg-slate-800/60 text-slate-400 hover:text-white transition-colors"
+          className="absolute right-4 top-4 rounded-lg p-1.5 hover:bg-[var(--surface)] text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors"
         >
           <X className="h-5 w-5" />
           <span className="sr-only">Close</span>
@@ -128,7 +128,7 @@ export function SheetHeader({ children, className }: SheetHeaderProps) {
 
 export function SheetTitle({ children, className }: SheetTitleProps) {
   return (
-    <h2 className={cn("text-lg font-semibold text-white", className)}>
+    <h2 className={cn("text-lg font-semibold text-[var(--foreground)]", className)}>
       {children}
     </h2>
   )
@@ -136,7 +136,7 @@ export function SheetTitle({ children, className }: SheetTitleProps) {
 
 export function SheetDescription({ children, className }: SheetDescriptionProps) {
   return (
-    <p className={cn("text-sm text-slate-400", className)}>
+    <p className={cn("text-sm text-[var(--foreground-muted)]", className)}>
       {children}
     </p>
   )

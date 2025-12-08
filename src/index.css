@@ -2,11 +2,177 @@
 
 @plugin "tailwindcss-animate";
 
+/* ========================================
+   DESIGN TOKENS - Color Palette
+   Based on warm earthy tones
+   ======================================== */
+
+@theme {
+	/* Primary - Coral/Orange */
+	--color-primary-50: #fef3f0;
+	--color-primary-100: #fde4dd;
+	--color-primary-200: #fccfc3;
+	--color-primary-300: #f9ad99;
+	--color-primary-400: #e88a70;
+	--color-primary-500: #d87355;
+	--color-primary-600: #c45a3d;
+	--color-primary-700: #a44830;
+	--color-primary-800: #873f2c;
+	--color-primary-900: #6f3829;
+
+	/* Accent - Golden Yellow */
+	--color-accent-50: #fdf8ed;
+	--color-accent-100: #f9edd4;
+	--color-accent-200: #f3d9a8;
+	--color-accent-300: #e8b86d;
+	--color-accent-400: #dfa043;
+	--color-accent-500: #d68b2a;
+	--color-accent-600: #bc6e20;
+	--color-accent-700: #9c521d;
+	--color-accent-800: #80421f;
+	--color-accent-900: #6a371c;
+
+	/* Sage - Olive Green */
+	--color-sage-50: #f4f6f0;
+	--color-sage-100: #e7eadf;
+	--color-sage-200: #d0d6c2;
+	--color-sage-300: #b2bc9b;
+	--color-sage-400: #8b956d;
+	--color-sage-500: #768257;
+	--color-sage-600: #5d6745;
+	--color-sage-700: #495139;
+	--color-sage-800: #3c4230;
+	--color-sage-900: #34392b;
+
+	/* Wine - Burgundy */
+	--color-wine-50: #f9f5f5;
+	--color-wine-100: #f2e9ea;
+	--color-wine-200: #e6d5d6;
+	--color-wine-300: #d4b5b8;
+	--color-wine-400: #bd8d92;
+	--color-wine-500: #a56d73;
+	--color-wine-600: #7b4f54;
+	--color-wine-700: #6a4247;
+	--color-wine-800: #593a3e;
+	--color-wine-900: #4c3437;
+
+	/* Blush - Rose/Pink */
+	--color-blush-50: #fdf8f6;
+	--color-blush-100: #f9efe9;
+	--color-blush-200: #f2ddd4;
+	--color-blush-300: #dda99e;
+	--color-blush-400: #d6988a;
+	--color-blush-500: #c87d6d;
+	--color-blush-600: #b66455;
+	--color-blush-700: #985246;
+	--color-blush-800: #7e453c;
+	--color-blush-900: #693d36;
+
+	/* Cream - Warm Neutrals */
+	--color-cream-50: #fdfcfa;
+	--color-cream-100: #f6eee7;
+	--color-cream-200: #e5d5c8;
+	--color-cream-300: #d5bfac;
+	--color-cream-400: #c4a58e;
+	--color-cream-500: #b69077;
+	--color-cream-600: #a87b65;
+	--color-cream-700: #8c6554;
+	--color-cream-800: #735448;
+	--color-cream-900: #5f473e;
+
+	/* Slate - Dark Base */
+	--color-slate-50: #f8fafb;
+	--color-slate-100: #eef2f4;
+	--color-slate-200: #dde4e8;
+	--color-slate-300: #c4cfd6;
+	--color-slate-400: #8b9aa6;
+	--color-slate-500: #667788;
+	--color-slate-600: #505d68;
+	--color-slate-700: #434d55;
+	--color-slate-800: #343d46;
+	--color-slate-900: #2a3238;
+	--color-slate-950: #1e2428;
+}
+
+/* ========================================
+   CSS Custom Properties for Theming
+   ======================================== */
+
+:root {
+	/* Light Mode (Default) */
+	--background: var(--color-cream-100);
+	--background-secondary: var(--color-cream-50);
+	--background-card: #ffffff;
+	--background-elevated: var(--color-cream-50);
+
+	--foreground: var(--color-slate-900);
+	--foreground-secondary: var(--color-slate-600);
+	--foreground-muted: var(--color-slate-500);
+
+	--border: var(--color-cream-300);
+	--border-subtle: var(--color-cream-200);
+
+	--surface: var(--color-cream-200);
+	--surface-hover: var(--color-cream-300);
+
+	--primary: var(--color-primary-500);
+	--primary-hover: var(--color-primary-600);
+	--primary-foreground: #ffffff;
+	--primary-muted: var(--color-primary-100);
+
+	--success: #22c55e;
+	--success-muted: #dcfce7;
+	--error: #ef4444;
+	--error-muted: #fee2e2;
+	--warning: var(--color-accent-400);
+	--warning-muted: var(--color-accent-100);
+
+	--shadow-color: rgba(0, 0, 0, 0.08);
+	--shadow-color-strong: rgba(0, 0, 0, 0.12);
+}
+
+.dark {
+	--background: var(--color-slate-950);
+	--background-secondary: var(--color-slate-900);
+	--background-card: var(--color-slate-800);
+	--background-elevated: var(--color-slate-800);
+
+	--foreground: var(--color-cream-100);
+	--foreground-secondary: var(--color-cream-200);
+	--foreground-muted: var(--color-slate-400);
+
+	--border: var(--color-slate-700);
+	--border-subtle: var(--color-slate-800);
+
+	--surface: var(--color-slate-700);
+	--surface-hover: var(--color-slate-600);
+
+	--primary: var(--color-primary-500);
+	--primary-hover: var(--color-primary-400);
+	--primary-foreground: #ffffff;
+	--primary-muted: rgba(216, 115, 85, 0.15);
+
+	--success: #4ade80;
+	--success-muted: rgba(74, 222, 128, 0.15);
+	--error: #f87171;
+	--error-muted: rgba(248, 113, 113, 0.15);
+	--warning: var(--color-accent-300);
+	--warning-muted: rgba(232, 184, 109, 0.15);
+
+	--shadow-color: rgba(0, 0, 0, 0.3);
+	--shadow-color-strong: rgba(0, 0, 0, 0.5);
+}
+
+/* ========================================
+   Base Styles
+   ======================================== */
+
 @layer base {
 	* {
 		margin: 0;
 		padding: 0;
 		box-sizing: border-box;
+		border-color: var(--border);
 	}
 
 	body {
@@ -15,11 +181,16 @@
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
 		overflow: hidden;
-		background: #0f1419;
+		background-color: var(--background);
+		color: var(--foreground);
+		transition: background-color 0.2s ease, color 0.2s ease;
 	}
 }
 
-/* Custom Scrollbar */
+/* ========================================
+   Custom Scrollbar
+   ======================================== */
+
 .custom-scrollbar::-webkit-scrollbar {
 	width: 6px;
 }
@@ -29,18 +200,82 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-	background: rgba(100, 116, 139, 0.3);
+	background: var(--border);
 	border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-	background: rgba(100, 116, 139, 0.5);
+	background: var(--surface-hover);
 }
 
-/* Glass effect */
+/* ========================================
+   Glass Effect
+   ======================================== */
+
 .glass-effect {
-	background: rgba(15, 23, 42, 0.7);
+	background: rgba(255, 255, 255, 0.7);
 	backdrop-filter: blur(12px);
 	-webkit-backdrop-filter: blur(12px);
-	border: 1px solid rgba(71, 85, 105, 0.2);
+	border: 1px solid var(--border-subtle);
+}
+
+.dark .glass-effect {
+	background: rgba(30, 36, 40, 0.8);
+	border: 1px solid var(--border);
+}
+
+/* ========================================
+   Utility Classes
+   ======================================== */
+
+.bg-background {
+	background-color: var(--background);
+}
+.bg-background-secondary {
+	background-color: var(--background-secondary);
+}
+.bg-background-card {
+	background-color: var(--background-card);
+}
+.bg-background-elevated {
+	background-color: var(--background-elevated);
+}
+.bg-surface {
+	background-color: var(--surface);
+}
+.bg-primary {
+	background-color: var(--primary);
+}
+.bg-primary-muted {
+	background-color: var(--primary-muted);
+}
+
+.text-foreground {
+	color: var(--foreground);
+}
+.text-foreground-secondary {
+	color: var(--foreground-secondary);
+}
+.text-foreground-muted {
+	color: var(--foreground-muted);
+}
+.text-primary {
+	color: var(--primary);
+}
+
+.border-default {
+	border-color: var(--border);
+}
+.border-subtle {
+	border-color: var(--border-subtle);
+}
+
+.shadow-theme {
+	box-shadow: 0 4px 6px -1px var(--shadow-color),
+		0 2px 4px -2px var(--shadow-color);
+}
+
+.shadow-theme-lg {
+	box-shadow: 0 10px 15px -3px var(--shadow-color-strong),
+		0 4px 6px -4px var(--shadow-color);
 }

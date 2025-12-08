@@ -49,6 +49,16 @@
     "title": "Settings",
     "subtitle": "Configure your application preferences",
     "sections": {
+      "appearance": {
+        "title": "Appearance",
+        "description": "Customize the look and feel of the application",
+        "themeLabel": "Theme",
+        "themes": {
+          "light": "Light",
+          "dark": "Dark",
+          "system": "System"
+        }
+      },
       "language": {
         "title": "Language",
         "description": "Choose your preferred language"

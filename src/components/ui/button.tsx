@@ -5,19 +5,19 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer disabled:cursor-not-allowed",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer disabled:cursor-not-allowed",
   {
     variants: {
       variant: {
-        default: "bg-slate-800 text-white hover:bg-slate-700 border border-slate-700",
+        default: "bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)] shadow-theme",
         destructive:
-          "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30",
+          "bg-[var(--error-muted)] text-[var(--error)] hover:bg-[var(--error)]/20 border border-[var(--error)]/30",
         outline:
-          "border border-slate-700 bg-transparent hover:bg-slate-800 text-slate-300",
+          "border border-[var(--border)] bg-transparent hover:bg-[var(--surface)] text-[var(--foreground-secondary)]",
         secondary:
-          "bg-slate-800 text-slate-200 hover:bg-slate-700",
-        ghost: "hover:bg-slate-800 hover:text-slate-200",
-        link: "text-blue-400 underline-offset-4 hover:underline",
+          "bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-hover)]",
+        ghost: "hover:bg-[var(--surface)] hover:text-[var(--foreground)]",
+        link: "text-[var(--primary)] underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-4 py-2",

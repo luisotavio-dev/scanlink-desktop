@@ -1,6 +1,8 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
+export type Theme = "light" | "dark" | "system"
+
 export interface BarcodeItem {
 	barcode: string
 	timestamp: string
@@ -25,6 +27,7 @@ export interface ServerState {
 
 export interface AppSettings {
 	minimizeToTray: boolean
+	theme: Theme
 }
 
 interface AppStore {
@@ -57,6 +60,7 @@ export const useAppStore = create<AppStore>()(
 			error: null,
 			settings: {
 				minimizeToTray: false,
+				theme: "dark",
 			},
 
 			addBarcode: (barcode, timestamp) =>

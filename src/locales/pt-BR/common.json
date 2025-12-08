@@ -49,6 +49,16 @@
     "title": "Configurações",
     "subtitle": "Configure as preferências da aplicação",
     "sections": {
+      "appearance": {
+        "title": "Aparência",
+        "description": "Personalize a aparência da aplicação",
+        "themeLabel": "Tema",
+        "themes": {
+          "light": "Claro",
+          "dark": "Escuro",
+          "system": "Sistema"
+        }
+      },
       "language": {
         "title": "Idioma",
         "description": "Escolha seu idioma preferido"
