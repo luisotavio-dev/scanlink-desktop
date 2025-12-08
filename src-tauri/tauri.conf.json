@@ -38,6 +38,21 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "linux": {
+      "deb": {
+        "postInstallScript": "scripts/postinst.sh",
+        "postRemoveScript": "scripts/postrm.sh"
+      },
+      "rpm": {
+        "postInstallScript": "scripts/postinst.sh",
+        "postRemoveScript": "scripts/postrm.sh"
+      }
+    },
+    "windows": {
+      "nsis": {
+        "installerHooks": "scripts/nsis-hooks.nsh"
+      }
+    }
   }
 }

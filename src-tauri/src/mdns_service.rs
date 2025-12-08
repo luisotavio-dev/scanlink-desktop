@@ -1,13 +1,16 @@
 use mdns_sd::{ServiceDaemon, ServiceInfo};
 use std::sync::{Arc, Mutex};
 
+#[allow(dead_code)] // Reserved for future mDNS discovery feature
 const SERVICE_TYPE: &str = "_scanlink._tcp.local.";
 
+#[allow(dead_code)] // Reserved for future mDNS discovery feature
 pub struct MdnsService {
     daemon: Arc<Mutex<Option<ServiceDaemon>>>,
     service_fullname: Arc<Mutex<Option<String>>>,
 }
 
+#[allow(dead_code)] // Reserved for future mDNS discovery feature
 impl MdnsService {
     pub fn new() -> Self {
         Self {

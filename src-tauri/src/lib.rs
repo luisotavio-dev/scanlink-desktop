@@ -34,6 +34,7 @@ struct AppState {
     server_task: Arc<Mutex<Option<JoinHandle<()>>>>,
     starting: Arc<Mutex<bool>>,  // Prevents concurrent start_server calls
     config: Arc<Mutex<AppConfig>>,
+    #[allow(dead_code)] // Reserved for future mDNS discovery feature
     mdns: Arc<Mutex<Option<MdnsService>>>,
 }
 
@@ -99,7 +100,7 @@ async fn start_server(
     // Generate token and get IP
     let token = generate_token();
     let ip = get_local_ip()?;
-    let port = 8081;
+    let port = 47592; // Porta incomum para evitar conflitos
 
     let connection_info = ConnectionInfo {
         ip: ip.clone(),

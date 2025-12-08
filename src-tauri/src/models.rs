@@ -115,6 +115,7 @@ pub struct AppSettings {
 }
 
 // WebSocket response messages
+#[allow(dead_code)] // Reserved for future WebSocket response handling
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WsResponse {
     pub action: String,

@@ -19,6 +19,7 @@ pub struct AuthorizedDevice {
 }
 
 impl AuthorizedDevice {
+    #[allow(dead_code)] // Reserved for future device management feature
     pub fn new(device_id: String, device_name: String, device_model: Option<String>) -> Self {
         let now = chrono::Utc::now().to_rfc3339();
         Self {
@@ -39,6 +40,7 @@ pub fn generate_secret_key() -> String {
 }
 
 /// Generates a random 32-character alphanumeric token
+#[allow(dead_code)] // Reserved for future master token feature
 pub fn generate_master_token() -> String {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
                             abcdefghijklmnopqrstuvwxyz\

@@ -108,10 +108,12 @@ impl AppConfig {
         self.authorized_devices.contains_key(device_id)
     }
 
+    #[allow(dead_code)] // Reserved for future device management feature
     pub fn get_device(&self, device_id: &str) -> Option<&AuthorizedDevice> {
         self.authorized_devices.get(device_id)
     }
 
+    #[allow(dead_code)] // Reserved for future device management feature
     pub fn get_device_mut(&mut self, device_id: &str) -> Option<&mut AuthorizedDevice> {
         self.authorized_devices.get_mut(device_id)
     }
